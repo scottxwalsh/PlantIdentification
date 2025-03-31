@@ -10,9 +10,16 @@ import {
   Image,
   ScrollView,
   Alert,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { searchPlants, getPlantCategories } from '../services/plantEncyclopedia';
+
+const FILTER_OPTIONS = {
+  waterNeeds: ['Low', 'Moderate', 'High'],
+  sunlight: ['Low', 'Partial', 'Full'],
+  difficulty: ['Easy', 'Moderate', 'Hard'],
+};
 
 const PlantEncyclopediaScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,11 +27,17 @@ const PlantEncyclopediaScreen = ({ navigation }) => {
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState(['All']);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    waterNeeds: null,
+    sunlight: null,
+    difficulty: null,
+  });
 
   useEffect(() => {
     loadCategories();
     loadPlants();
-  }, [selectedCategory]);
+  }, [selectedCategory, filters]);
 
   const loadCategories = async () => {
     try {
@@ -41,7 +54,26 @@ const PlantEncyclopediaScreen = ({ navigation }) => {
     try {
       const category = selectedCategory === 'All' ? null : selectedCategory;
       const results = await searchPlants(searchQuery, category);
-      setPlants(results);
+      
+      // Apply filters
+      let filteredResults = results;
+      if (filters.waterNeeds) {
+        filteredResults = filteredResults.filter(
+          plant => plant.care.waterNeeds === filters.waterNeeds
+        );
+      }
+      if (filters.sunlight) {
+        filteredResults = filteredResults.filter(
+          plant => plant.care.sunlight === filters.sunlight
+        );
+      }
+      if (filters.difficulty) {
+        filteredResults = filteredResults.filter(
+          plant => plant.care.difficulty === filters.difficulty
+        );
+      }
+
+      setPlants(filteredResults);
     } catch (error) {
       console.error('Error loading plants:', error);
       Alert.alert('Error', 'Failed to load plants');
@@ -52,11 +84,79 @@ const PlantEncyclopediaScreen = ({ navigation }) => {
 
   const handleSearch = (text) => {
     setSearchQuery(text);
-    // Debounce the search to avoid too many API calls
     setTimeout(() => {
       loadPlants();
     }, 500);
   };
+
+  const toggleFilter = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: prev[filterType] === value ? null : value,
+    }));
+  };
+
+  const renderFilterButton = (type, value) => (
+    <TouchableOpacity
+      style={[
+        styles.filterButton,
+        filters[type] === value && styles.filterButtonActive,
+      ]}
+      onPress={() => toggleFilter(type, value)}
+    >
+      <Text
+        style={[
+          styles.filterButtonText,
+          filters[type] === value && styles.filterButtonTextActive,
+        ]}
+      >
+        {value}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderFilterSection = (title, type, options) => (
+    <View style={styles.filterSection}>
+      <Text style={styles.filterSectionTitle}>{title}</Text>
+      <View style={styles.filterOptions}>
+        {options.map(option => renderFilterButton(type, option))}
+      </View>
+    </View>
+  );
+
+  const renderFilterModal = () => (
+    <Modal
+      visible={showFilters}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowFilters(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Filter Plants</Text>
+            <TouchableOpacity
+              onPress={() => setShowFilters(false)}
+              style={styles.closeButton}
+            >
+              <Icon name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          {renderFilterSection('Water Needs', 'waterNeeds', FILTER_OPTIONS.waterNeeds)}
+          {renderFilterSection('Sunlight', 'sunlight', FILTER_OPTIONS.sunlight)}
+          {renderFilterSection('Difficulty', 'difficulty', FILTER_OPTIONS.difficulty)}
+
+          <TouchableOpacity
+            style={styles.clearFiltersButton}
+            onPress={() => setFilters({ waterNeeds: null, sunlight: null, difficulty: null })}
+          >
+            <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 
   const renderPlantItem = ({ item }) => (
     <TouchableOpacity
@@ -91,6 +191,8 @@ const PlantEncyclopediaScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const activeFiltersCount = Object.values(filters).filter(Boolean).length;
+
   return (
     <View style={styles.container}>
       <View style={styles.searchContainer}>
@@ -101,6 +203,24 @@ const PlantEncyclopediaScreen = ({ navigation }) => {
           value={searchQuery}
           onChangeText={handleSearch}
         />
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            activeFiltersCount > 0 && styles.filterButtonActive,
+          ]}
+          onPress={() => setShowFilters(true)}
+        >
+          <Icon
+            name="filter-variant"
+            size={24}
+            color={activeFiltersCount > 0 ? '#fff' : '#666'}
+          />
+          {activeFiltersCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -137,7 +257,7 @@ const PlantEncyclopediaScreen = ({ navigation }) => {
           <Text style={styles.emptyStateText}>
             {searchQuery
               ? 'No plants found matching your search'
-              : 'No plants available in this category'}
+              : 'No plants available with current filters'}
           </Text>
         </View>
       ) : (
@@ -149,6 +269,8 @@ const PlantEncyclopediaScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {renderFilterModal()}
     </View>
   );
 };
@@ -275,6 +397,92 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 12,
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  filterButtonActive: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  filterButtonText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  filterButtonTextActive: {
+    color: '#fff',
+  },
+  clearFiltersButton: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  clearFiltersText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#ff4444',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
