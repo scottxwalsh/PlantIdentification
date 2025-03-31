@@ -24,7 +24,20 @@ export const identifyPlant = async (imagePath) => {
             PLANT_ID_API_URL,
             {
               images: [base64data],
-              plant_details: ['common_names', 'description', 'taxonomy', 'url'],
+              plant_details: [
+                'common_names',
+                'description',
+                'taxonomy',
+                'url',
+                'care_instructions',
+                'growing_zones',
+                'sunlight',
+                'water_needs',
+                'soil_type',
+                'growth_rate',
+                'mature_height',
+                'mature_width',
+              ],
             },
             {
               headers: {
@@ -43,6 +56,16 @@ export const identifyPlant = async (imagePath) => {
               commonNames: bestMatch.plant_details?.common_names || [],
               confidence: bestMatch.probability,
               wikiUrl: bestMatch.plant_details?.url || '',
+              care: {
+                instructions: bestMatch.plant_details?.care_instructions || '',
+                sunlight: bestMatch.plant_details?.sunlight || '',
+                waterNeeds: bestMatch.plant_details?.water_needs || '',
+                soilType: bestMatch.plant_details?.soil_type || '',
+                growthRate: bestMatch.plant_details?.growth_rate || '',
+                matureHeight: bestMatch.plant_details?.mature_height || '',
+                matureWidth: bestMatch.plant_details?.mature_width || '',
+              },
+              growingZones: bestMatch.plant_details?.growing_zones || [],
             });
           } else {
             reject(new Error('No plant matches found'));

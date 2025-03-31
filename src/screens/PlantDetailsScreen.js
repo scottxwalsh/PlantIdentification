@@ -33,6 +33,58 @@ const PlantDetailsScreen = () => {
     }
   };
 
+  const renderCareSection = () => {
+    if (!plantData.care) return null;
+
+    const careItems = [
+      { icon: 'white-balance-sunny', label: 'Sunlight', value: plantData.care.sunlight },
+      { icon: 'water', label: 'Water Needs', value: plantData.care.waterNeeds },
+      { icon: 'sprout', label: 'Growth Rate', value: plantData.care.growthRate },
+      { icon: 'ruler', label: 'Mature Size', value: `${plantData.care.matureHeight} × ${plantData.care.matureWidth}` },
+      { icon: 'soil', label: 'Soil Type', value: plantData.care.soilType },
+    ].filter(item => item.value);
+
+    if (careItems.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Care Requirements</Text>
+        <View style={styles.careGrid}>
+          {careItems.map((item, index) => (
+            <View key={index} style={styles.careItem}>
+              <Icon name={item.icon} size={24} color="#4CAF50" />
+              <Text style={styles.careLabel}>{item.label}</Text>
+              <Text style={styles.careValue}>{item.value}</Text>
+            </View>
+          ))}
+        </View>
+        {plantData.care.instructions && (
+          <View style={styles.instructionsContainer}>
+            <Text style={styles.instructionsTitle}>Care Instructions</Text>
+            <Text style={styles.instructionsText}>{plantData.care.instructions}</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderGrowingZones = () => {
+    if (!plantData.growingZones || plantData.growingZones.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Growing Zones</Text>
+        <View style={styles.zonesContainer}>
+          {plantData.growingZones.map((zone, index) => (
+            <View key={index} style={styles.zoneTag}>
+              <Text style={styles.zoneText}>USDA {zone}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -71,6 +123,9 @@ const PlantDetailsScreen = () => {
           </View>
         </View>
       )}
+
+      {renderCareSection()}
+      {renderGrowingZones()}
 
       {plantData.description && (
         <View style={styles.section}>
@@ -193,6 +248,65 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  careGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 16,
+  },
+  careItem: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  careLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  careValue: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  instructionsContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  instructionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: '#444',
+    lineHeight: 20,
+  },
+  zonesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  zoneTag: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  zoneText: {
+    color: '#1976d2',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
