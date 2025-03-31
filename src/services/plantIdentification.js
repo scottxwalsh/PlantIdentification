@@ -1,7 +1,5 @@
 import axios from 'axios';
-
-const PLANT_ID_API_KEY = 'YOUR_API_KEY'; // TODO: Move to environment variables
-const PLANT_ID_API_URL = 'https://api.plant.id/v2/identify';
+import { PLANT_ID_API_KEY, PLANT_ID_API_URL } from '@env';
 
 export const identifyPlant = async (imagePath) => {
   try {
