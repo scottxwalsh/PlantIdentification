@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity, Text, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { identifyPlant } from '../services/plantIdentification';
 
 const ResultScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,21 +20,41 @@ const ResultScreen = () => {
   };
 
   const handleIdentify = async () => {
+    if (!photo) return;
+    
     setIsProcessing(true);
     try {
-      // TODO: Implement plant identification API call here
-      // For now, we'll simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      navigation.navigate('PlantDetails', {
-        plantData: {
-          name: 'Sample Plant',
-          scientificName: 'Sample Scientific Name',
-          description: 'This is a sample plant description.',
-          careInstructions: 'Sample care instructions.',
-        }
-      });
+      const plantData = await identifyPlant(photo);
+      
+      if (plantData.confidence < 0.5) {
+        Alert.alert(
+          'Low Confidence',
+          'The identification confidence is low. Would you like to try again with a different photo?',
+          [
+            {
+              text: 'Try Again',
+              onPress: handleRetake,
+            },
+            {
+              text: 'View Anyway',
+              onPress: () => navigation.navigate('PlantDetails', { plantData }),
+            },
+          ]
+        );
+      } else {
+        navigation.navigate('PlantDetails', { plantData });
+      }
     } catch (error) {
-      console.error('Identification failed:', error);
+      Alert.alert(
+        'Identification Failed',
+        error.message || 'Failed to identify the plant. Please try again.',
+        [
+          {
+            text: 'Try Again',
+            onPress: handleRetake,
+          },
+        ]
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -73,7 +94,12 @@ const ResultScreen = () => {
           disabled={isProcessing}
         >
           {isProcessing ? (
-            <ActivityIndicator color="white" />
+            <View style={styles.processingContainer}>
+              <ActivityIndicator color="white" />
+              <Text style={[styles.buttonText, styles.processingText]}>
+                Identifying...
+              </Text>
+            </View>
           ) : (
             <Text style={styles.buttonText}>Identify Plant</Text>
           )}
@@ -133,6 +159,14 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  processingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  processingText: {
+    fontSize: 14,
   },
 });
 
