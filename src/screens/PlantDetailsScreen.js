@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,29 @@ import {
   TouchableOpacity,
   Linking,
   Share,
+  Alert,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { saveFavorite, removeFavorite, isFavorite } from '../services/storage';
 
 const PlantDetailsScreen = () => {
   const route = useRoute();
   const { plantData } = route.params;
+  const [isFavorited, setIsFavorited] = useState(false);
+
+  useEffect(() => {
+    checkFavoriteStatus();
+  }, []);
+
+  const checkFavoriteStatus = async () => {
+    try {
+      const favorited = await isFavorite(plantData.scientificName);
+      setIsFavorited(favorited);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
 
   const handleShare = async () => {
     try {
@@ -30,6 +46,25 @@ const PlantDetailsScreen = () => {
   const handleWikiLink = () => {
     if (plantData.wikiUrl) {
       Linking.openURL(plantData.wikiUrl);
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
+    try {
+      if (isFavorited) {
+        await removeFavorite(plantData.scientificName);
+        setIsFavorited(false);
+      } else {
+        const saved = await saveFavorite(plantData);
+        if (saved) {
+          setIsFavorited(true);
+        } else {
+          Alert.alert('Already Saved', 'This plant is already in your favorites.');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      Alert.alert('Error', 'Failed to update favorites');
     }
   };
 
@@ -92,9 +127,21 @@ const PlantDetailsScreen = () => {
           <Text style={styles.plantName}>{plantData.name}</Text>
           <Text style={styles.scientificName}>{plantData.scientificName}</Text>
         </View>
-        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-          <Icon name="share-variant" size={24} color="#4CAF50" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.favoriteButton} 
+            onPress={handleFavoriteToggle}
+          >
+            <Icon 
+              name={isFavorited ? 'heart' : 'heart-outline'} 
+              size={24} 
+              color={isFavorited ? '#ff4444' : '#4CAF50'} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+            <Icon name="share-variant" size={24} color="#4CAF50" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.confidenceContainer}>
@@ -165,6 +212,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   plantName: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -175,6 +226,10 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  favoriteButton: {
+    padding: 8,
+    marginRight: 8,
   },
   shareButton: {
     padding: 8,
