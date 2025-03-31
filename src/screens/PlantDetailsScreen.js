@@ -11,15 +11,17 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { saveFavorite, removeFavorite, isFavorite } from '../services/storage';
+import { saveFavorite, removeFavorite, isFavorite, getFavoriteCount } from '../services/storage';
 
 const PlantDetailsScreen = () => {
   const route = useRoute();
   const { plantData } = route.params;
   const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteCount, setFavoriteCount] = useState(0);
 
   useEffect(() => {
     checkFavoriteStatus();
+    loadFavoriteCount();
   }, []);
 
   const checkFavoriteStatus = async () => {
@@ -28,6 +30,15 @@ const PlantDetailsScreen = () => {
       setIsFavorited(favorited);
     } catch (error) {
       console.error('Error checking favorite status:', error);
+    }
+  };
+
+  const loadFavoriteCount = async () => {
+    try {
+      const count = await getFavoriteCount(plantData.scientificName);
+      setFavoriteCount(count);
+    } catch (error) {
+      console.error('Error loading favorite count:', error);
     }
   };
 
@@ -54,10 +65,12 @@ const PlantDetailsScreen = () => {
       if (isFavorited) {
         await removeFavorite(plantData.scientificName);
         setIsFavorited(false);
+        setFavoriteCount(prev => Math.max(0, prev - 1));
       } else {
         const saved = await saveFavorite(plantData);
         if (saved) {
           setIsFavorited(true);
+          setFavoriteCount(prev => prev + 1);
         } else {
           Alert.alert('Already Saved', 'This plant is already in your favorites.');
         }
@@ -128,16 +141,19 @@ const PlantDetailsScreen = () => {
           <Text style={styles.scientificName}>{plantData.scientificName}</Text>
         </View>
         <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            style={styles.favoriteButton} 
-            onPress={handleFavoriteToggle}
-          >
-            <Icon 
-              name={isFavorited ? 'heart' : 'heart-outline'} 
-              size={24} 
-              color={isFavorited ? '#ff4444' : '#4CAF50'} 
-            />
-          </TouchableOpacity>
+          <View style={styles.favoriteContainer}>
+            <TouchableOpacity 
+              style={styles.favoriteButton} 
+              onPress={handleFavoriteToggle}
+            >
+              <Icon 
+                name={isFavorited ? 'heart' : 'heart-outline'} 
+                size={24} 
+                color={isFavorited ? '#ff4444' : '#4CAF50'} 
+              />
+            </TouchableOpacity>
+            <Text style={styles.favoriteCount}>{favoriteCount}</Text>
+          </View>
           <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
             <Icon name="share-variant" size={24} color="#4CAF50" />
           </TouchableOpacity>
@@ -227,9 +243,17 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 4,
   },
+  favoriteContainer: {
+    alignItems: 'center',
+    marginRight: 8,
+  },
   favoriteButton: {
     padding: 8,
-    marginRight: 8,
+  },
+  favoriteCount: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
   shareButton: {
     padding: 8,

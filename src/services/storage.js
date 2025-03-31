@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const FAVORITES_KEY = '@plant_lens_favorites';
+const FAVORITE_COUNTS_KEY = '@plant_lens_favorite_counts';
 
 export const saveFavorite = async (plant) => {
   try {
@@ -12,6 +13,13 @@ export const saveFavorite = async (plant) => {
     if (!isDuplicate) {
       const updatedFavorites = [...favorites, { ...plant, savedAt: new Date().toISOString() }];
       await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updatedFavorites));
+      
+      // Update favorite count
+      const counts = await getFavoriteCounts();
+      const currentCount = counts[plant.scientificName] || 0;
+      counts[plant.scientificName] = currentCount + 1;
+      await AsyncStorage.setItem(FAVORITE_COUNTS_KEY, JSON.stringify(counts));
+      
       return true;
     }
     return false;
@@ -28,6 +36,14 @@ export const removeFavorite = async (scientificName) => {
       (favorite) => favorite.scientificName !== scientificName
     );
     await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updatedFavorites));
+    
+    // Update favorite count
+    const counts = await getFavoriteCounts();
+    if (counts[scientificName] > 0) {
+      counts[scientificName] -= 1;
+      await AsyncStorage.setItem(FAVORITE_COUNTS_KEY, JSON.stringify(counts));
+    }
+    
     return true;
   } catch (error) {
     console.error('Error removing favorite:', error);
@@ -52,5 +68,25 @@ export const isFavorite = async (scientificName) => {
   } catch (error) {
     console.error('Error checking favorite status:', error);
     return false;
+  }
+};
+
+export const getFavoriteCounts = async () => {
+  try {
+    const counts = await AsyncStorage.getItem(FAVORITE_COUNTS_KEY);
+    return counts ? JSON.parse(counts) : {};
+  } catch (error) {
+    console.error('Error getting favorite counts:', error);
+    return {};
+  }
+};
+
+export const getFavoriteCount = async (scientificName) => {
+  try {
+    const counts = await getFavoriteCounts();
+    return counts[scientificName] || 0;
+  } catch (error) {
+    console.error('Error getting favorite count:', error);
+    return 0;
   }
 }; 
