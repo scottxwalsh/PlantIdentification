@@ -1,10 +1,17 @@
 import axios from 'axios';
 import { PLANT_ID_API_KEY, PLANT_ID_API_URL } from '@env';
+import { preprocessImage, validateImage } from '../utils/imageProcessing';
 
 export const identifyPlant = async (imagePath) => {
   try {
-    // Convert image to base64
-    const response = await fetch(imagePath);
+    // Validate image first
+    await validateImage(imagePath);
+    
+    // Preprocess the image
+    const processedImageUri = await preprocessImage(imagePath);
+    
+    // Convert processed image to base64
+    const response = await fetch(processedImageUri);
     const blob = await response.blob();
     const reader = new FileReader();
     
