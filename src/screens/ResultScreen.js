@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Image, TouchableOpacity, Text, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { identifyPlant } from '../services/plantIdentification';
+import { getErrorMessage } from '../utils/errorHandling';
 
 const ResultScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -45,9 +46,10 @@ const ResultScreen = () => {
         navigation.navigate('PlantDetails', { plantData });
       }
     } catch (error) {
+      const errorMessage = getErrorMessage(error);
       Alert.alert(
         'Identification Failed',
-        error.message || 'Failed to identify the plant. Please try again.',
+        errorMessage,
         [
           {
             text: 'Try Again',
